@@ -1,0 +1,18 @@
+<?xml version='1.0' encoding='utf-8'?>
+<!DOCTYPE hibernate-configuration PUBLIC
+    "-//Hibernate/Hibernate Configuration DTD//EN"
+    "http://hibernate.sourceforge.net/hibernate-configuration-3.0.dtd">
+<hibernate-configuration>
+    <session-factory>
+        <property name="connection.url">jdbc:postgresql:secure_widgets</property>
+        <property name="connection.driver_class">org.postgresql.Driver</property>
+        <property name="connection.username">rsutphin</property>
+        <property name="connection.password"/>
+        <!-- DB schema will be updated if needed -->
+        <property name="hbm2ddl.auto">update</property>
+        <!-- since this is just a spike -->
+        <property name="connection.autocommit">true</property>
+
+        <mapping class="edu.northwestern.nubic.nci.widgets.domain.Widget"/>
+    </session-factory>
+</hibernate-configuration>
