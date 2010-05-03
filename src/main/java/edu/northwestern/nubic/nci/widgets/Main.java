@@ -113,7 +113,6 @@ public class Main {
             int upper = Math.min(values.size(), splitCt + splitAmount);
             List<String> subValues = values.subList(splitCt, upper);
             split.add(subValues);
-            System.out.println(splitCt + " to " + upper + " => " + subValues.size() + " [" + subValues.get(0) + ", " + subValues.get(subValues.size() - 1) + ']');
             splitCt += splitAmount;
         }
 
@@ -132,8 +131,6 @@ public class Main {
             int i = lit.previousIndex();
             q.setParameterList("c" + i, block);
         }
-        System.err.println("split query for " + inParam + " into " + split.size() +
-            " IN clause(s) of no more than " + splitAmount + " items");
         return q;
     }
 
