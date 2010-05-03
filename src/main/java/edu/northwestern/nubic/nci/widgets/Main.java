@@ -11,6 +11,7 @@ import gov.nih.nci.security.dao.ProtectionElementSearchCriteria;
 import gov.nih.nci.security.dao.ProtectionGroupSearchCriteria;
 import gov.nih.nci.security.exceptions.CSObjectNotFoundException;
 import gov.nih.nci.security.exceptions.CSTransactionException;
+import org.hibernate.Query;
 import org.hibernate.Session;
 
 import java.util.ArrayList;
@@ -18,7 +19,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Set;
 
 /**
@@ -85,13 +88,53 @@ public class Main {
     }
 
     private Collection<Widget> getWidgets(Collection<String> widgetCodes) {
+        return getWidgets(widgetCodes, Integer.MAX_VALUE);
+    }
+
+    private Collection<Widget> getWidgets(Collection<String> widgetCodes, int clauseSize) {
+        long startTime = System.currentTimeMillis();
         Session s = Persistence.getSession();
         try {
-            return s.createQuery("from Widget w where w.code in (:codes)").
-                setParameterList("codes", new ArrayList<String>(widgetCodes)).list();
+            List<Widget> result =
+                createSplitInQuery(s, "from Widget w where ", "w.code", clauseSize, widgetCodes).list();
+            System.err.println(
+                "getWidgets() took " + (System.currentTimeMillis() - startTime) + "ms for " + result.size() + " items");
+            return result;
         } finally {
             if (s.isOpen()) s.close();
         }
+    }
+
+    private Query createSplitInQuery(Session s, String baseQuery, String inParam, int splitAmount, Collection<String> parameterValues) {
+        List<String> values = new ArrayList<String>(parameterValues);
+        List<List<String>> split = new LinkedList<List<String>>();
+        int splitCt = 0;
+        while (splitCt < values.size()) {
+            int upper = Math.min(values.size(), splitCt + splitAmount);
+            List<String> subValues = values.subList(splitCt, upper);
+            split.add(subValues);
+            System.out.println(splitCt + " to " + upper + " => " + subValues.size() + " [" + subValues.get(0) + ", " + subValues.get(subValues.size() - 1) + ']');
+            splitCt += splitAmount;
+        }
+
+        StringBuilder qs = new StringBuilder(baseQuery).append('(');
+        for (int i = 0; i < split.size(); i++) {
+            qs.append(inParam).append(" in (:c").append(i).append(')');
+            if (i < split.size() - 1) {
+                qs.append(" OR ");
+            }
+        }
+        qs.append(')');
+
+        Query q = s.createQuery(qs.toString());
+        for (ListIterator<List<String>> lit = split.listIterator(); lit.hasNext();) {
+            List<String> block = lit.next();
+            int i = lit.previousIndex();
+            q.setParameterList("c" + i, block);
+        }
+        System.err.println("split query for " + inParam + " into " + split.size() +
+            " IN clause(s) of no more than " + splitAmount + " items");
+        return q;
     }
 
     public Collection<Widget> getVisibleWidgets(String username, String roleName) throws CSObjectNotFoundException {
@@ -99,8 +142,13 @@ public class Main {
         try {
             User jo = CSM.getAuthorizationManager().getUser(username);
             Set<String> widgetCodes = new LinkedHashSet<String>();
-            Set<ProtectionElementPrivilegeContext> contexts = CSM.getAuthorizationManager().
-                getProtectionElementPrivilegeContextForUser(jo.getUserId().toString());
+            Set<ProtectionElementPrivilegeContext> contexts;
+            {
+                long csmStartTime = System.currentTimeMillis();
+                contexts = CSM.getAuthorizationManager().
+                    getProtectionElementPrivilegeContextForUser(jo.getUserId().toString());
+                System.err.println("getProtectionElementPrivilegeContextForUser() took " + (System.currentTimeMillis() - csmStartTime) + "ms for " + contexts.size() + " contexts");
+            }
             for (ProtectionElementPrivilegeContext context : contexts) {
                 boolean include;
                 if (roleName != null) {
@@ -119,18 +167,44 @@ public class Main {
             }
             return getWidgets(widgetCodes);
         } finally {
-            System.err.println("Query took " + (System.currentTimeMillis() - startTime) + "ms");
+            System.err.println("getVisibleWidgets took " + (System.currentTimeMillis() - startTime) + "ms total");
         }
+    }
+
+    public void runAssociatedWidgetsTest() throws Exception {
+        runAssociatedWidgetsTest(26 * 26);
+    }
+
+    public void runAssociatedWidgetsTest(int lxCt) throws Exception {
+        associate("jo", "LX", manyCodes(lxCt).toArray(new String[lxCt]));
+        associate("jo", "SE", "SEE", "SEA", "SEAL", "SELX");
+
+        Collection<Widget> all = getVisibleWidgets("jo");
+        System.out.println("Jo can see these widgets " + all);
+        System.out.println("  (" + all.size() + " total)");
+        System.out.println("  As SE, it's these: " + getVisibleWidgets("jo", "SE"));
+    }
+
+    public Collection<Widget> runGetLotsOfWidgetsTest(int count, int clauseSize) {
+        return getWidgets(manyCodes(count), clauseSize);
+    }
+
+    private Collection<String> manyCodes(int count) {
+        Collection<String> manyCodes = new ArrayList<String>();
+        for (char i = 'A'; i <= 'Z' && manyCodes.size() < count ; i++) {
+            for (char j = 'A'; j <= 'Z' && manyCodes.size() < count ; j++) {
+                for (char k = 'A'; k <= 'Z' && manyCodes.size() < count ; k++) {
+                    manyCodes.add("" + i + j + k);
+                }
+            }
+        }
+        return manyCodes;
     }
 
     public static void main(final String[] args) throws Exception {
         new Setup().go();
 
         Main m = new Main();
-        m.associate("jo", "LX", "ALX", "BLX", "VLX", "SELX");
-        m.associate("jo", "SE", "SEE", "SEA", "SEAL", "SELX");
-
-        System.out.println("Jo can see these widgets " + m.getVisibleWidgets("jo"));
-        System.out.println("  As LX, it's these: " + m.getVisibleWidgets("jo", "LX"));
+        m.runAssociatedWidgetsTest(26 * 26);
     }
 }
