@@ -2,7 +2,7 @@ package edu.northwestern.nubic.nci.widgets;
 
 import gov.nih.nci.security.AuthorizationManager;
 import gov.nih.nci.security.dao.AuthorizationDAO;
-import gov.nih.nci.security.dao.AuthorizationDAOImpl;
+import edu.northwestern.nubic.nci.widgets.csmext.FasterAuthorizationDaoImpl;
 import gov.nih.nci.security.exceptions.CSConfigurationException;
 import gov.nih.nci.security.provisioning.AuthorizationManagerImpl;
 import gov.nih.nci.security.system.ApplicationSessionFactory;
@@ -37,7 +37,7 @@ public class CSM {
         if (dao == null) {
             try {
                 SessionFactory sf = ApplicationSessionFactory.getSessionFactory(APPLICATION_NAME, csmConnectionProperties());
-                dao = new AuthorizationDAOImpl(sf, APPLICATION_NAME);
+                dao = new FasterAuthorizationDaoImpl(sf, APPLICATION_NAME);
             } catch (CSConfigurationException e) {
                 throw new RuntimeException(e);
             }
