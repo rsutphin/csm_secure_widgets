@@ -173,13 +173,13 @@ public class Main {
     }
 
     public void runAssociatedWidgetsTest(int lxCt) throws Exception {
-        associate("jo", "LX", manyCodes(lxCt).toArray(new String[lxCt]));
-        associate("jo", "SE", "SEE", "SEA", "SEAL", "SELX");
+        associate("jo", "Reader", manyCodes(lxCt).toArray(new String[lxCt]));
+        associate("jo", "Editor", "SEE", "SEA", "SEAL", "SELX");
 
         Collection<Widget> all = getVisibleWidgets("jo");
         System.out.println("Jo can see these widgets " + all);
         System.out.println("  (" + all.size() + " total)");
-        System.out.println("  As SE, it's these: " + getVisibleWidgets("jo", "SE"));
+        System.out.println("  As Editor, it's these: " + getVisibleWidgets("jo", "Editor"));
     }
 
     public Collection<Widget> runGetLotsOfWidgetsTest(int count, int clauseSize) {
@@ -202,6 +202,6 @@ public class Main {
         new Setup().go();
 
         Main m = new Main();
-        m.runAssociatedWidgetsTest(26 * 26);
+        m.runAssociatedWidgetsTest(200);
     }
 }

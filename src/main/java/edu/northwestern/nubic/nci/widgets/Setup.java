@@ -86,8 +86,8 @@ public class Setup {
     }
 
     private void createRoles() throws CSTransactionException {
-        createRole("LX");
-        createRole("SE");
+        createRole("Reader");
+        createRole("Editor");
     }
 
     private void createRole(String roleName) throws CSTransactionException {
